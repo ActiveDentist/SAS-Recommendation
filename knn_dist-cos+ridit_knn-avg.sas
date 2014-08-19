@@ -146,38 +146,30 @@ quit;
 /* Item AVG to Missing rating */   /*******************************************************************    null >>> ItemAVG     */
 /* base_dense_avged       OUT */
 /* base_dense_null        IN  */
+
 proc iml;
 use reco.base_dense_null;
 read all into rating;
 close;
 
 do item = 1 to ncol(rating);
-	itemAVG =  /*mean(rating[ ,item])*/  sum(rating[ ,item])/countn(rating[ ,item]);
-	
-do replacement = 1 to nrow(rating);
-	
-	if rating [replacement ,item] =. then do;
-			rating [replacement ,item] = itemAVG ;
+	if countn(rating[ ,item]) ^=. then do;		
+		itemAVG =  mean(rating[ ,item]);
+		do replacement = 1 to nrow(rating);
+			if rating [replacement ,item] =. then do;
+					rating [replacement ,item] = itemAVG ;
 			end;
+		end;
+	end;
+	if countn(rating[ ,item]) =0 then do;
+	rating[ ,item] = &AvgRating;
 	end;
 end;
-
+	
 create reco.base_dense_avged from rating ;
 append from rating ;
 close reco.base_dense_avged;
-quit;
-
-/* Replace missing when no one has ever watched the movie */
-data reco.base_dense_avged;
-set reco.base_dense_avged;
-array nums _numeric_;
-do over nums;
- if nums=. then nums=&AvgRating;
-end;
-run;
-
-
-
+quit;	
 
 
 
@@ -229,15 +221,17 @@ quit;
 
 
 /* optional: SVD for euclid distance *****************************************************************        SVD   */
-/* Dimensionality reduction **********/
+/* Dimensionality reduction ***********/
+/* var Col1000 should use all ItemIds 
 proc princomp 
 	data=reco.base_dense
 	out=work.base_svd
 	noprint
 	cov 
 	n=&N; 
-    var Col1-Col1000;  /* 1000 original: Should use all ItemIds */
+    var Col1-Col1000;  
 run;
+*/
 
 proc iml;
 use work.base_svd ;
@@ -275,12 +269,6 @@ create reco.distance_diag from inputData;
 append from inputData;
 close reco.distance_diag ;
 quit;
-
-
-
-
-
-
 
 
 /*** k-NN ***************************************************************************************************        k-NN       */
@@ -338,7 +326,7 @@ rename Col3 = ItemId;
 quit;
 
 
-/* Debias k-NN rating prediction and bound to limits */
+/* Debias k-NN rating prediction and bound to limits
 data reco.knn_all_debiased (keep=UserID ItemID PredRating PredRatingBounded);
 	 merge reco.knn_all    (keep=UserID ItemID PredRating in=a)
 		   reco.AVG_UserID (keep=UserId Bias in=b);
@@ -347,9 +335,17 @@ data reco.knn_all_debiased (keep=UserID ItemID PredRating PredRatingBounded);
 	 PredRating = PredRating + Bias;
 	 PredRatingBounded = min(max(PredRating, &MinRating ),&MaxRating);
 run;
-
-
-
+ */
+ 
+/* Debias k-NN rating prediction and bound to limits */
+data   reco.knn_all_debiased   /* (keep=UserID ItemID PredRating PredRatingBounded) */ /view=reco.knn_all_debiased;
+	 merge reco.knn_all         (keep=UserID ItemID PredRating in=a)
+		   reco.AVG_UserID (keep=UserId Bias in=b);
+	 by UserId;
+	 if a & b;
+	 PredRating = PredRating + Bias;
+	 PredRatingBounded = min(max(PredRating, &MinRating ),&MaxRating);
+run;
 
 
 /******************************************************/
@@ -366,10 +362,12 @@ run;
 %let PredRating = PredRatingBounded;		/* PredRatingBounded */
 %let tableName  = reco.knn_all_debiased; /* reco.knn_all_debiased_II */
 
-/* Tell SAS that the table is sorted to accelerate subsequent queries */
+/* Tell SAS that the table is sorted to accelerate subsequent queries 
 proc sort data=&tableName presorted;
 by UserId ItemId;
 run;
+ 
+ */
  
 /* Merge target and prediction & calculate Square Error */
 data reco.rmse_merged(keep=SquareDiff);
