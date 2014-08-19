@@ -120,7 +120,7 @@ run;
 /* base_dense_normalized OUT */
 /* base_dense_null       IN  */
 proc iml;
-use reco.base_dense_null;
+use reco.base_dense; /*_null*/
 read all into ratings;
 close;
 
@@ -130,7 +130,7 @@ close;
 
 do user = 1 to nrow(ratings);
 	do item = 1 to ncol(ratings);
-		if ratings [user,item] ^=. then do; 
+		if ratings [user,item] ^=0 then do; /*.*/
 			ratings [user,item] = ratings [user,item] - avgs [user, 2];
 		end;
 	end;
@@ -231,7 +231,7 @@ proc princomp
 	n=&N; 
     var Col1-Col1000;  
 run;
-*/
+
 
 proc iml;
 use work.base_svd ;
@@ -242,7 +242,7 @@ create reco.svd from principal ;
 append from principal ;
 close reco.svd;
 quit;
-
+*/
 
 
 /* Users distances ************************************************************************************        DISTANCE    */
@@ -274,13 +274,17 @@ quit;
 /*** k-NN ***************************************************************************************************        k-NN       */
 proc iml;
 /* Read data */
-use reco.base_dense_avged ;
+use reco.base_dense_normalized  ;
 read all var _num_ into rating;
 close;
 
 
 use reco.distance_diag;
 read all var _all_ into distances;
+close;
+
+use reco.AVG_UserID;
+read all var{AvgUserRating} into userAVG;
 close;
 
 /* Settings */
@@ -296,15 +300,44 @@ do reference = 1 to nrow(rating );
 	
 	distance = distances[ ,reference];
 	
-	/* Sort distances in ascending (1–N) order, return indices */
+	
+	
+	/* Sort distances in descending(1–N) order, return indices */
 	call sortndx(ndx, distance, {1}, {1} /*,descend*/); 
 	
+	/* Sort & return distances in descending order */
+	call sort(distance,{1},{1});
+	
+	topDistance = distance [1:k];
+	
 	/* Store k nearest neighbours */
-	nearestNeighbor[reference,] = ndx[1:k]`; /**/
+	nearestNeighbor[reference,] = ndx[1:k]`; 
+	
+	/* Save distances sum */
+	scalesum = topDistance [:,1]; 
+	
+	/* Prepare scales: distance/SUM(distances) */
+	scales = topDistance [ ,1] / scalesum;
+	
+	/* ratings * scales */
+	scalRat = scales` * rating[nearestNeighbor[reference,],];
+	
+	/* Create Binary Rating Matrix */
+	binM = (rating[nearestNeighbor[reference,],]^=0);
+	
+	/* Create Matrix to fix scales (zero ratings) */ 
+	fix = scales` * binM;
+	
+	
+	
+	recommendation[reference,] = userAVG[reference] + (scalRat / fix );
+	
 
-	/* Get recommendation (average recommendation of the nearest neighbours) */
+	/* Get recommendation (average recommendation of the nearest neighbours) 
 	recommendation[reference,] = mean(rating[nearestNeighbor[reference,],]);
-		
+	*/
+
+	
 end;	
 
 /* Convert dense to sparse matrix */
@@ -314,7 +347,47 @@ result = sparse(recommendation);
 create reco.knn_all from result;
 append from result;
 close reco.knn_all;
+
+/*tests 
+
+
+create reco.t_distance from distance ;
+append from distance ;
+close reco.t_distance ;
+
+create reco.t_nearestNeighbor from nearestNeighbor;
+append from nearestNeighbor;
+close reco.t_nearestNeighbor;
+
+create reco.t_scelesum  from scelesum ;
+append from scelesum ;
+close reco.t_scelesum ;
+
+create reco.t_scales  from scales ;
+append from scales ;
+close reco.t_scales ;
+
+create reco.t_scalRat from scalRat ;
+append from scalRat ;
+close reco.t_scalRat ;
+
+create reco.t_binM  from binM ;
+append from binM ;
+close reco.t_binM  ;
+
+create reco.t_fix from fix ;
+append from fix ;
+close reco.t_fix ;
+
+create reco.t_recommendation from recommendation;
+append from recommendation;
+close reco.t_recommendation;
+
+*/
+
 quit;
+
+
 
 
 /* Rename columns */
@@ -343,7 +416,7 @@ data   reco.knn_all_debiased   /* (keep=UserID ItemID PredRating PredRatingBound
 		   reco.AVG_UserID (keep=UserId Bias in=b);
 	 by UserId;
 	 if a & b;
-	 PredRating = PredRating + Bias;
+	/* PredRating = PredRating + Bias;*/
 	 PredRatingBounded = min(max(PredRating, &MinRating ),&MaxRating);
 run;
 
@@ -370,7 +443,7 @@ run;
  */
  
 /* Merge target and prediction & calculate Square Error */
-data reco.rmse_merged(keep=SquareDiff);
+data reco.rmse_merged(keep=SquareDiff Rating &PredRating);
      merge reco.sample(keep=UserId ItemID Rating DevSample where=(DevSample="T") in=a)
            &tableName(keep=UserId ItemID &PredRating in=b);
      by UserId ItemID;
