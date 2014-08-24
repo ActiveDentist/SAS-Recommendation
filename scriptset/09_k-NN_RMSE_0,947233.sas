@@ -202,7 +202,7 @@ proc distance
 	data=reco.ridit_dense /* ridit*/ /* avged */ /* normalized  */
 	method= &DistanceMethod 
 	out=reco.distance;
-    var ratio /*interval*/ (Col1-Col1682); *********/*1682*/***************************************************
+    var ratio /*interval*/ (Col1-Col1682); *********/*1682  3952 */***************************************************
    run;
    
 /* Remove diagonal distances */
