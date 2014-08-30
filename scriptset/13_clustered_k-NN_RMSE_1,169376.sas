@@ -312,7 +312,7 @@ read all var{AvgUserRating} into userAVG;
 close;
 
 /* Settings: used lower number from k and number of clusters*/
-k = min(&k , &nCluster-1); 
+k = max(min(&k , &nCluster-1),1); 
 
 /* Initialisation */
 nearestNeighbor = J(nrow(rating ), k, 0); 			/* Matrix of nearest neighbors */
