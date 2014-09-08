@@ -4,6 +4,9 @@ LIBNAME reco'/folders/myfolders/KNN/Data'; 		/* Data directory specification    
 %let RandomSeed = 955;							/* Dividing random number seed)       */
 %let k=80; 	/* default 50 */					/* Count of nearest neighbors to find */ 
 /**************************************************************************************/
+%let _sdtm=%sysfunc(datetime()); 					/* Store Script Start Time				*/
+/********************************************************************************************/
+
 
 
 /******************************************************/
@@ -115,6 +118,8 @@ run;
 /******************************************************/
 
 
+/* Store Recommendation Start Time	*/
+%let _recostart=%sysfunc(datetime()); 					
 
 
 /* Item AVG to Missing rating */   /*******************************************************************    null >>> ItemAVG     */
@@ -218,6 +223,14 @@ data reco.knn_all_debiased  /view=reco.knn_all_debiased;
 	/* PredRatingBounded = min(max(PredRating, &MinRating ),&MaxRating); */
 run;
 
+/* Measure recommendation elapsed time */
+%let _recoend=%sysfunc(datetime());
+%let _recoruntm=%sysfunc(putn(&_recoend - &_recostart, 12.4));
+%put It took &_recoruntm second to do recommendations;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_recoruntm"second to do recommendations";
+quit;
 
 
 
@@ -297,4 +310,14 @@ close;
 fruifulness = counts`;
 fruifulness [ ,2]  = fruifulness [ ,2] / 100;
 print fruifulness;
+quit;
+
+
+/* Measure elapsed time */
+%let _edtm=%sysfunc(datetime());
+%let _runtm=%sysfunc(putn(&_edtm - &_sdtm, 12.4));
+%put It took &_runtm second to run the script;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_runtm "second to run the script";
 quit;

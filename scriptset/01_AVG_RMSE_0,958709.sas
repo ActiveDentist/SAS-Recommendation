@@ -1,13 +1,19 @@
-/*Data directory specification*/ 
-LIBNAME rcm '/folders/myfolders/KNN/Data' ;
+/********************************************************************************************/	
+LIBNAME rcm '/folders/myfolders/KNN/Data' ; 		/*Data directory specification			*/ 
+%let InDS= rcm._base_1M;   							/*Used DataSet							*/
+%let RandomSeed = 984;								/*Random seed: dividing into T&L Parts	*/
+/********************************************************************************************/
+%let _sdtm=%sysfunc(datetime()); 					/* Store Script Start Time				*/
+/********************************************************************************************/
 
-%let InDS= rcm._base_1m;   	/*Used DataSet*/
-%let RandomSeed = 984;		/*Random seed: dividing into T&L Parts*/
+
 
 
 /******************************************************************/
-/**********************Recommendation******************************/
+/********************  Recommendation  ****************************/
 /******************************************************************/
+
+
 
 /*Divide BaseTable into L (80%) & T(20%) parts*/
 data rcm.A_SampleTable;
@@ -19,6 +25,9 @@ call streaminit(&RandomSeed); /* set random number seed */
    else
    Part = "T";
 run;
+
+/* Store Recommendation Start Time				*/
+%let _recostart=%sysfunc(datetime()); 					
 
 /* Item AVG */
 proc sql;
@@ -92,7 +101,7 @@ into: MinRating
 from &InDS;
 quit;
 
-/*** Bound to limits v 2***/
+/*** Bound to limits */
 data rcm.A_DataSetPredicted_adv;
 set rcm.A_DataSetPredicted ;
     PredRatingBounded=	min(max(RcmRating, &MinRating ),&MaxRating);
@@ -107,10 +116,19 @@ from rcm.A_DataSetPredicted_adv
 where Part = "T";
 
 
+/* Measure recommendation elapsed time */
+%let _recoend=%sysfunc(datetime());
+%let _recoruntm=%sysfunc(putn(&_recoend - &_recostart, 12.4));
+%put It took &_recoruntm second to do recommendations;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_recoruntm"second to do recommendations";
+quit;
+
 
 
 /******************************************************************/
-/**********************Benchmark***********************************/
+/********************  Benchmark  *********************************/
 /******************************************************************/
 
 
@@ -123,7 +141,7 @@ from rcm.AVG
 where Part = 'T';
 quit;
 
-/* Report Prediction Succes */
+/* Report Prediction Succes 
 Title3 "Differences: Success, Diff1-Diff4, SUM";
 proc iml;
 use rcm.AVG ;
@@ -150,7 +168,7 @@ counts[6,1] = sum (counts [,1]);
 counts[6,2] = sum (counts [,2]);
 print counts;
 quit;
-
+*/
 
 /* Report Prediction Succes FOR EXCEL*/
 Title3 "Differences: Success, Diff1-Diff4, SUM, FOR EXCEL " ;
@@ -182,3 +200,11 @@ print counts;
 quit;
 
 
+/* Measure elapsed time */
+%let _edtm=%sysfunc(datetime());
+%let _runtm=%sysfunc(putn(&_edtm - &_sdtm, 12.4));
+%put It took &_runtm second to run the script;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_runtm "second to run the script";
+quit;

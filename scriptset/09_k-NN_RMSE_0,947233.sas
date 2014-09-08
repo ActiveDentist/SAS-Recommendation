@@ -1,11 +1,13 @@
 /**************************************************************************************/
 LIBNAME reco'/folders/myfolders/KNN/Data'; 		/* Data directory specification       */  
-%let InDS= reco._base;							/* Basic DataSet                      */
+%let InDS= reco._base_1M;							/* Basic DataSet                      */
 %let RandomSeed = 955;							/* Dividing random number seed)       */
 %let k=80; 	/* default 50 */					/* Count of nearest neighbors to find */ 
 %let DistanceMethod=cosine;						/* Distance measure method	  		  */
-
 /**************************************************************************************/
+%let _sdtm=%sysfunc(datetime()); 					/* Store Script Start Time				*/
+/********************************************************************************************/
+
 
 
 
@@ -110,6 +112,9 @@ do over nums;
 end;
 run;
 
+/* Store Recommendation Start Time */
+%let _recostart=%sysfunc(datetime()); 			
+
 
 
 
@@ -202,7 +207,7 @@ proc distance
 	data=reco.ridit_dense /* ridit*/ /* avged */ /* normalized  */
 	method= &DistanceMethod 
 	out=reco.distance;
-    var ratio /*interval*/ (Col1-Col1682); *********/*1682  3952 */***************************************************
+    var ratio /*interval*/ (Col:); *********/*1682  3952 */***************************************************
    run;
    
 /* Remove diagonal distances */
@@ -224,7 +229,7 @@ quit;
 /*** k-NN ***************************************************************************************************        k-NN       */
 proc iml;
 /* Read data */
-use reco.base_dense_avged /* _normalized */ ;
+use reco.base_dense /*_avged *//* _normalized */ ;
 read all var _num_ into rating;
 close;
 
@@ -316,6 +321,16 @@ data   reco.knn_all_debiased   /* (keep=UserID ItemID PredRating PredRatingBound
 	 PredRatingBounded = min(max(PredRating, &MinRating ),&MaxRating);
 run;
 
+/* Measure recommendation elapsed time */
+%let _recoend=%sysfunc(datetime());
+%let _recoruntm=%sysfunc(putn(&_recoend - &_recostart, 12.4));
+%put It took &_recoruntm second to do recommendations;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_recoruntm"second to do recommendations";
+quit;
+
+
 
 /******************************************************/
 /********************* EVALUATION *********************/
@@ -398,4 +413,13 @@ close;
 fruifulness = counts`;
 fruifulness [ ,2]  = fruifulness [ ,2] / 100;
 print fruifulness;
+quit;
+
+/* Measure elapsed time */
+%let _edtm=%sysfunc(datetime());
+%let _runtm=%sysfunc(putn(&_edtm - &_sdtm, 12.4));
+%put It took &_runtm second to run the script;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_runtm "second to run the script";
 quit;
