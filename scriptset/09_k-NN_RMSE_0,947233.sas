@@ -1,12 +1,12 @@
 /**************************************************************************************/
 LIBNAME reco'/folders/myfolders/KNN/Data'; 		/* Data directory specification       */  
-%let InDS= reco._base_1M;							/* Basic DataSet                      */
+%let InDS= reco._base_1M;						/* Basic DataSet                      */
 %let RandomSeed = 955;							/* Dividing random number seed)       */
 %let k=80; 	/* default 50 */					/* Count of nearest neighbors to find */ 
 %let DistanceMethod=cosine;						/* Distance measure method	  		  */
 /**************************************************************************************/
-%let _sdtm=%sysfunc(datetime()); 					/* Store Script Start Time				*/
-/********************************************************************************************/
+%let _sdtm=%sysfunc(datetime()); 				/* Store Script Start Time			  */
+/**************************************************************************************/
 
 
 
@@ -229,7 +229,7 @@ quit;
 /*** k-NN ***************************************************************************************************        k-NN       */
 proc iml;
 /* Read data */
-use reco.base_dense /*_avged *//* _normalized */ ;
+use reco.base_dense_avged /* _normalized */ ;
 read all var _num_ into rating;
 close;
 

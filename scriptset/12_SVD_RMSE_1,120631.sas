@@ -6,6 +6,9 @@ LIBNAME reco'/folders/myfolders/KNN/Data'; 		/* Data directory specification    
 %let DistanceMethod=cosine;						/* Distance measure method	  		  */
 %let N=20; 	/* default 20 */					/* number of principal components to be computed*/
 /**************************************************************************************/
+%let _sdtm=%sysfunc(datetime()); 					/* Store Script Start Time		  */
+/**************************************************************************************/
+
 
 
 
@@ -122,6 +125,12 @@ do over nums;
 end;
 run;
 
+
+/* Store Recommendation Start Time */
+%let _recostart=%sysfunc(datetime()); 			
+
+
+
 /* Item AVG to Missing rating */ /******************************************************************* null >>> ItemAVG */
 proc iml;
 use reco.base_imputed;
@@ -148,6 +157,7 @@ do over nums;
 if nums=. then nums=&AvgRating;
 end;
 run;
+
 
 
 /*** SVD. See: http://www.cs.carleton.edu/cs_comps/0607/recommend/recommender/svd.html for more details ***/
@@ -216,6 +226,16 @@ ImputedRating = PredRating;
 if ImputedRating = . then ImputedRating = 3.53;
 PredRating = min(max(ImputedRating, 1), 5);
 run;
+
+/* Measure recommendation elapsed time */
+%let _recoend=%sysfunc(datetime());
+%let _recoruntm=%sysfunc(putn(&_recoend - &_recostart, 12.4));
+%put It took &_recoruntm second to do recommendations;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_recoruntm"second to do recommendations";
+quit;
+
 
 
 /******************************************************/
@@ -305,4 +325,13 @@ fruifulness [ ,2]  = fruifulness [ ,2] / 100;
 print fruifulness;
 quit;
 
+
+/* Measure elapsed time */
+%let _edtm=%sysfunc(datetime());
+%let _runtm=%sysfunc(putn(&_edtm - &_sdtm, 12.4));
+%put It took &_runtm second to run the script;
+Title3 "Elapsed time";
+proc iml;
+print "It took " &_runtm "second to run the script";
+quit;
 
